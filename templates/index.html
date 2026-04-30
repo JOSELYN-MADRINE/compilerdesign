@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Python Compiler IDE</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════ reset & variables */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green:       #16a34a;
+  --green-light: #22c55e;
+  --green-dim:   #dcfce7;
+  --green-dark:  #14532d;
+  --blue:        #3b82f6;
+  --red:         #ef4444;
+  --orange:      #f97316;
+  --purple:      #8b5cf6;
+  --yellow:      #eab308;
+
+  --bg:          #f8fafc;
+  --surface:     #ffffff;
+  --surface2:    #f1f5f9;
+  --border:      #e2e8f0;
+  --border2:     #cbd5e1;
+  --text:        #0f172a;
+  --text2:       #475569;
+  --text3:       #94a3b8;
+
+  --code-bg:     #0f172a;
+  --code-text:   #e2e8f0;
+
+  --radius:      12px;
+  --radius-sm:   8px;
+  --shadow:      0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:   0 4px 6px rgba(0,0,0,.07), 0 10px 40px rgba(0,0,0,.1);
+  --transition:  .18s cubic-bezier(.4,0,.2,1);
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════ navbar */
+.navbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 0 var(--border), 0 2px 8px rgba(0,0,0,.04);
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  text-decoration: none;
+}
+.logo-icon {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--green), #15803d);
+  border-radius: 9px;
+  display: grid; place-items: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 2px 8px rgba(22,163,74,.35);
+}
+.nav-spacer { flex: 1; }
+.parser-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+}
+.parser-group label {
+  font-size: 12px;
+  color: var(--text2);
+  padding: 0 8px;
+  font-weight: 500;
+}
+.parser-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+}
+.parser-btn.active {
+  background: var(--surface);
+  color: var(--green);
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
+.nav-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--green-dim);
+  color: var(--green-dark);
+}
+
+/* ═══════════════════════════════════════════ main layout */
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 20px;
+  padding: 20px 24px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════ card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.card-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: grid; place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.card-icon.green  { background: var(--green-dim); color: var(--green); }
+.card-icon.blue   { background: #dbeafe; color: var(--blue); }
+.card-icon.purple { background: #ede9fe; color: var(--purple); }
+
+/* ═══════════════════════════════════════════ editor */
+.editor-panel { grid-row: span 1; }
+.editor-body {
+  display: flex;
+  flex-direction: column;
+}
+.editor-wrap {
+  display: flex;
+  height: 420px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 13.5px;
+  line-height: 1.7;
+  border-bottom: 1px solid #1e293b;
+}
+.gutter {
+  background: var(--code-bg);
+  color: #4b5563;
+  padding: 14px 8px 14px 12px;
+  text-align: right;
+  user-select: none;
+  border-right: 1px solid #1e293b;
+  min-width: 46px;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow: hidden;
+  flex-shrink: 0;
+  white-space: pre;
+}
+#codeEditor {
+  flex: 1;
+  padding: 14px;
+  background: var(--code-bg);
+  color: #e2e8f0;
+  caret-color: #f8fafc;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  tab-size: 4;
+  white-space: pre;
+  overflow: auto;
+  spellcheck: false;
+}
+#codeEditor::-webkit-scrollbar { width: 7px; height: 7px; }
+#codeEditor::-webkit-scrollbar-track { background: #0f172a; }
+#codeEditor::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+#codeEditor::placeholder { color: #334155; }
+
+/* ═══════════════════════════════════════════ editor footer */
+.editor-footer {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(.97); }
+.btn-primary {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(22,163,74,.4);
+}
+.btn-primary:hover { background: #15803d; }
+.btn-run {
+  background: #7c3aed;
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(124,58,237,.4);
+}
+.btn-run:hover { background: #6d28d9; }
+.btn-ghost {
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--border); color: var(--text); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+.btn-spinner {
+  display: none;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading .btn-spinner { display: block; }
+.loading .btn-label  { display: none; }
+
+.spacer { flex: 1; }
+
+/* ═══════════════════════════════════════════ syntax guide */
+.syntax-guide {
+  margin: 0 16px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 11.5px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+.syntax-guide strong {
+  color: var(--text);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+.syntax-guide code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--green-dark);
+}
+
+/* ═══════════════════════════════════════════ stats */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.stat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+}
+.stat-num {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+  font-family: 'JetBrains Mono', monospace;
+  transition: var(--transition);
+}
+.stat-num.has-error { color: var(--red); }
+.stat-label {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 500;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+/* ═══════════════════════════════════════════ tabs */
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 14px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.tabs::-webkit-scrollbar { height: 3px; }
+.tab-btn {
+  padding: 7px 14px;
+  border-radius: 7px 7px 0 0;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: inherit;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  bottom: -1px;
+}
+.tab-btn:hover { color: var(--text2); background: var(--surface2); }
+.tab-btn.active {
+  color: var(--green);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-color: var(--surface);
+  font-weight: 600;
+}
+.tab-badge {
+  font-size: 10px;
+  background: var(--green-dim);
+  color: var(--green-dark);
+  border-radius: 99px;
+  padding: 1px 6px;
+  font-weight: 700;
+}
+.tab-badge.err { background: #fee2e2; color: #991b1b; }
+
+/* ═══════════════════════════════════════════ output panes */
+.output-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.tab-pane {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: auto;
+  padding: 16px;
+}
+.tab-pane.active { display: flex; }
+.tab-pane::-webkit-scrollbar { width: 6px; }
+.tab-pane::-webkit-scrollbar-track { background: transparent; }
+.tab-pane::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── console */
+.console-wrap {
+  flex: 1;
+  background: var(--code-bg);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow: auto;
+  min-height: 200px;
+}
+.console-line { display: flex; gap: 10px; }
+.console-line .prompt { color: var(--green-light); flex-shrink: 0; }
+.console-line .out    { color: #f1f5f9; }
+.console-line .err-out{ color: #f87171; }
+.console-empty { color: #475569; font-style: italic; }
+.console-header { color: #60a5fa; font-weight: 600; margin-bottom: 10px; }
+.console-divider { border: none; border-top: 1px solid #1e293b; margin: 10px 0; }
+
+/* ── token table */
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.token-table th {
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  font-family: 'Inter', sans-serif;
+}
+.token-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+.token-table tr:hover td { background: var(--surface2); }
+.token-type  { color: var(--purple); font-weight: 600; }
+.token-val   { color: var(--green-dark); }
+.tok-num     { color: var(--text3); }
+
+/* ── ast / steps / semantic */
+.code-block {
+  background: var(--code-bg);
+  color: var(--code-text);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow: auto;
+  flex: 1;
+  white-space: pre;
+}
+.code-block::-webkit-scrollbar { width: 6px; height: 6px; }
+.code-block::-webkit-scrollbar-track { background: #1e293b; }
+.code-block::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+.step-shift  { color: #86efac; }
+.step-reduce { color: #fde68a; }
+.step-accept { color: #60a5fa; }
+.step-err    { color: #f87171; }
+.step-hdr    { color: #60a5fa; font-weight: 600; }
+.step-ok     { color: #86efac; }
+.step-dim    { color: #475569; }
+.step-rule   { color: #c4b5fd; }
+
+/* ── symbol table */
+.sym-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sym-table th {
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 8px 14px;
+  text-align: left;
+  border-bottom: 2px solid var(--border);
+  font-family: 'Inter', sans-serif;
+}
+.sym-table td { padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.sym-table tr:hover td { background: var(--surface2); }
+.sym-name { font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--text); }
+.sym-type { font-family: 'JetBrains Mono', monospace; color: var(--blue); font-size: 12px; }
+.sym-line { color: var(--text3); font-size: 12px; }
+
+/* ── error / warning chips */
+.msg-list { display: flex; flex-direction: column; gap: 8px; }
+.msg-chip {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.msg-chip.err  { background: #fef2f2; border: 1px solid #fecaca; color: #7f1d1d; }
+.msg-chip.warn { background: #fffbeb; border: 1px solid #fde68a; color: #78350f; }
+.msg-chip.ok   { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; }
+.msg-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.msg-text { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
+
+/* ═══════════════════════════════════════════ summary */
+.phase-grid {
+  display: grid;
+  gap: 10px;
+}
+.phase-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.phase-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.phase-dot.pass { background: var(--green); }
+.phase-dot.fail { background: var(--red); }
+.phase-dot.skip { background: var(--border2); }
+.phase-name { font-weight: 600; font-size: 13px; min-width: 180px; }
+.phase-detail { font-size: 12.5px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+.phase-badge {
+  margin-left: auto;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.phase-badge.pass { background: var(--green-dim); color: var(--green-dark); }
+.phase-badge.fail { background: #fee2e2; color: #991b1b; }
+.phase-badge.skip { background: var(--surface2); color: var(--text3); border: 1px solid var(--border); }
+
+.result-banner {
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.result-banner.ok   { background: var(--green-dim); color: var(--green-dark); border: 1px solid #86efac; }
+.result-banner.fail { background: #fef2f2; color: #7f1d1d; border: 1px solid #fecaca; }
+.result-banner .big { font-size: 22px; }
+
+/* ═══════════════════════════════════════════ statusbar */
+.statusbar {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 6px 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 11.5px;
+  color: var(--text3);
+}
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: var(--transition);
+}
+.status-dot.ok   { background: var(--green); }
+.status-dot.fail { background: var(--red); }
+.status-dot.busy { background: var(--orange); animation: pulse 1s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+#statusText { transition: var(--transition); }
+
+/* ═══════════════════════════════════════════ empty state */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  gap: 10px;
+  padding: 40px;
+}
+.empty-state .big-icon { font-size: 40px; opacity: .4; }
+.empty-state p { font-size: 13px; text-align: center; }
+
+/* ═══════════════════════════════════════════ output panel layout */
+.output-panel { display: flex; flex-direction: column; }
+.output-panel .output-body { flex: 1; min-height: 0; }
+
+/* scrollbar track for tab panes */
+.tab-pane { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+
+/* ═══════════════════════════════════════════ toast */
+.toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 12px 22px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 24px rgba(0,0,0,.25);
+  z-index: 999;
+  opacity: 0;
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+</style>
+</head>
+<body>
+
+<!-- toast notification -->
+<div class="toast" id="toast">✔ <span id="toastMsg"></span></div>
+
+<!-- ════════════════════════════════════ NAVBAR -->
+<nav class="navbar">
+  <a class="logo" href="#">
+    <div class="logo-icon">&lt;/&gt;</div>
+    Python Compiler IDE
+  </a>
+  <span class="nav-badge">v1.0</span>
+  <div class="nav-spacer"></div>
+  <div class="parser-group">
+    <label>Parser:</label>
+    <button class="parser-btn active" onclick="setParser('topdown', this)">Top-Down</button>
+    <button class="parser-btn"        onclick="setParser('bottomup', this)">Bottom-Up</button>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════ MAIN -->
+<div class="main">
+
+  <!-- ────────────────────── LEFT: EDITOR -->
+  <div class="card editor-panel">
+    <div class="card-header">
+      <div class="card-icon green">✎</div>
+      <span class="card-title">Source Code Editor</span>
+    </div>
+
+    <div class="editor-body">
+      <div class="editor-wrap">
+        <div class="gutter" id="gutter">1</div>
+        <textarea id="codeEditor"
+          spellcheck="false"
+          autocomplete="off"
+          autocorrect="off"
+          placeholder="// Write your code here…"
+          oninput="onEditorChange()"
+          onscroll="syncScroll()"
+          onkeydown="handleTab(event)"></textarea>
+      </div>
+
+      <!-- syntax reference -->
+      <div class="syntax-guide">
+        <strong>Supported Syntax</strong>
+        Types: <code>int</code> <code>float</code> <code>string</code> <code>bool</code> &nbsp;·&nbsp;
+        Keywords: <code>if</code> <code>else</code> <code>while</code> <code>print</code> <code>true</code> <code>false</code> &nbsp;·&nbsp;
+        Operators: <code>+ - * / %</code> <code>== != &lt; &gt; &lt;= &gt;=</code> <code>&amp;&amp; || !</code> &nbsp;·&nbsp;
+        Comments: <code>// …</code>
+      </div>
+
+      <div class="editor-footer">
+        <button class="btn btn-primary" id="btnCompile" onclick="doCompile()">
+          <span class="btn-spinner" id="spin1"></span>
+          <span class="btn-label">▶ Compile</span>
+        </button>
+        <button class="btn btn-run" id="btnRun" onclick="doRun()">
+          <span class="btn-spinner" id="spin2"></span>
+          <span class="btn-label">⚡ Run Code</span>
+        </button>
+        <button class="btn btn-ghost" onclick="loadExample()">⊕ Example</button>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost btn-sm" onclick="clearAll()">✕ Clear</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportResults()">↓ Export</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────────── RIGHT: OUTPUT -->
+  <div class="card output-panel">
+    <div class="card-header">
+      <div class="card-icon blue">≡</div>
+      <span class="card-title">Compilation Output</span>
+    </div>
+
+    <!-- stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="statTokens">0</div>
+        <div class="stat-label">Tokens</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statLines">0</div>
+        <div class="stat-label">Lines</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statErrors">0</div>
+        <div class="stat-label">Errors</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="statSymbols">0</div>
+        <div class="stat-label">Symbols</div>
+      </div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('console',  this)">
+        ⌨ Console <span class="tab-badge" id="badgeConsole"></span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tokens',   this)">
+        # Tokens <span class="tab-badge" id="badgeTokens"></span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('ast',      this)">
+        ⊞ AST
+      </button>
+      <button class="tab-btn" onclick="switchTab('steps',    this)">
+        ↕ Parse Steps
+      </button>
+      <button class="tab-btn" onclick="switchTab('semantic', this)">
+        ✔ Semantic <span class="tab-badge err" id="badgeSem"></span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('symbols',  this)">
+        ⊗ Symbols <span class="tab-badge" id="badgeSymbols"></span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('summary',  this)">
+        ≡ Summary
+      </button>
+    </div>
+
+    <!-- pane bodies -->
+    <div class="output-body">
+
+      <!-- CONSOLE -->
+      <div class="tab-pane active" id="pane-console">
+        <div class="console-wrap" id="consoleOut">
+          <div class="console-empty">Click ▶ Compile or ⚡ Run Code to see output here…</div>
+        </div>
+      </div>
+
+      <!-- TOKENS -->
+      <div class="tab-pane" id="pane-tokens">
+        <div id="tokenContent">
+          <div class="empty-state">
+            <div class="big-icon">#</div>
+            <p>Tokens appear here after compilation.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- AST -->
+      <div class="tab-pane" id="pane-ast">
+        <pre class="code-block" id="astContent">AST appears here after compilation…</pre>
+      </div>
+
+      <!-- PARSE STEPS -->
+      <div class="tab-pane" id="pane-steps">
+        <pre class="code-block" id="stepsContent">Parse trace appears here after compilation…</pre>
+      </div>
+
+      <!-- SEMANTIC -->
+      <div class="tab-pane" id="pane-semantic">
+        <div id="semContent">
+          <div class="empty-state">
+            <div class="big-icon">✔</div>
+            <p>Semantic analysis results appear here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SYMBOLS -->
+      <div class="tab-pane" id="pane-symbols">
+        <div id="symContent">
+          <div class="empty-state">
+            <div class="big-icon">⊗</div>
+            <p>Declared variables appear here after compilation.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="tab-pane" id="pane-summary">
+        <div id="summaryContent">
+          <div class="empty-state">
+            <div class="big-icon">≡</div>
+            <p>Compilation summary appears here.</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /output-body -->
+  </div><!-- /output-panel -->
+
+</div><!-- /main -->
+
+<!-- ════════════════════════════════════ STATUS BAR -->
+<div class="statusbar">
+  <div class="status-dot" id="statusDot"></div>
+  <span id="statusText">Ready — write some code and click Compile</span>
+  <div class="spacer"></div>
+  <span id="cursorPos">Ln 1, Col 1</span>
+</div>
+
+<!-- ════════════════════════════════════ JAVASCRIPT -->
+<script>
+/* ────────────────────────────────── state */
+let currentParser  = 'topdown';
+let lastResult     = null;
+
+/* ────────────────────────────────── parser selector */
+function setParser(p, btn) {
+  currentParser = p;
+  document.querySelectorAll('.parser-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+/* ────────────────────────────────── tab switching */
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-' + name).classList.add('active');
+}
+
+/* ────────────────────────────────── editor helpers */
+function updateGutter() {
+  const ta    = document.getElementById('codeEditor');
+  const lines = ta.value.split('\n').length;
+  const nums  = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+  document.getElementById('gutter').textContent = nums;
+}
+
+function syncScroll() {
+  const ta  = document.getElementById('codeEditor');
+  document.getElementById('gutter').scrollTop = ta.scrollTop;
+}
+
+function onEditorChange() {
+  updateGutter();
+  syncScroll();
+  updateCursorPos();
+}
+
+function updateCursorPos() {
+  const ta  = document.getElementById('codeEditor');
+  const val = ta.value.substring(0, ta.selectionStart);
+  const ln  = val.split('\n').length;
+  const col = val.split('\n').pop().length + 1;
+  document.getElementById('cursorPos').textContent = `Ln ${ln}, Col ${col}`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('codeEditor');
+  ta.addEventListener('click',  updateCursorPos);
+  ta.addEventListener('keyup',  updateCursorPos);
+  ta.addEventListener('scroll', syncScroll);
+});
+
+/* Tab key inserts spaces */
+function handleTab(e) {
+  if (e.key !== 'Tab') return;
+  e.preventDefault();
+  const ta = e.target;
+  const s  = ta.selectionStart;
+  ta.value = ta.value.substring(0, s) + '    ' + ta.value.substring(ta.selectionEnd);
+  ta.selectionStart = ta.selectionEnd = s + 4;
+  onEditorChange();
+}
+
+/* ────────────────────────────────── stats animation */
+function animateStat(id, target, isError = false) {
+  const el  = document.getElementById(id);
+  const cur = parseInt(el.textContent) || 0;
+  const dur = 400;
+  const start = performance.now();
+  el.classList.toggle('has-error', isError && target > 0);
+  function step(now) {
+    const p = Math.min((now - start) / dur, 1);
+    el.textContent = Math.round(cur + (target - cur) * p);
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+
+function updateStats(stats) {
+  animateStat('statTokens',  stats.tokens);
+  animateStat('statLines',   stats.lines);
+  animateStat('statErrors',  stats.errors,  true);
+  animateStat('statSymbols', stats.symbols);
+}
+
+/* ────────────────────────────────── badge helpers */
+function setBadge(id, n, isErr = false) {
+  const el = document.getElementById(id);
+  if (!n) { el.textContent = ''; return; }
+  el.textContent = n;
+  el.className = 'tab-badge' + (isErr ? ' err' : '');
+}
+
+/* ────────────────────────────────── status bar */
+function setStatus(msg, state = 'idle') {
+  document.getElementById('statusText').textContent = msg;
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + state;
+}
+
+/* ────────────────────────────────── loading state */
+function setLoading(on, which = 'both') {
+  ['btnCompile','btnRun'].forEach(id => {
+    const b = document.getElementById(id);
+    b.classList.toggle('loading', on && (which === 'both' || id.includes(which === 'compile' ? 'Compile' : 'Run')));
+    b.disabled = on;
+  });
+}
+
+/* ────────────────────────────────── API call */
+async function callCompiler(execute) {
+  const src = document.getElementById('codeEditor').value;
+  if (!src.trim()) {
+    alert('Please enter some source code first.');
+    return;
+  }
+  setLoading(true, execute ? 'run' : 'compile');
+  setStatus('Compiling…', 'busy');
+
+  try {
+    const res = await fetch('/compile', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        source: src,
+        parser_type: currentParser,
+        execute: execute,
+      }),
+    });
+    const data = await res.json();
+    lastResult = data;
+    renderAll(data);
+  } catch (err) {
+    setStatus('Network error: ' + err.message, 'fail');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function doCompile() { callCompiler(false); }
+function doRun()     { callCompiler(true);  }
+
+/* ────────────────────────────────── render helpers */
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderAll(d) {
+  updateStats(d.stats || {tokens:0,lines:0,errors:0,symbols:0});
+  renderConsole(d);
+  renderTokens(d);
+  renderAST(d);
+  renderSteps(d);
+  renderSemantic(d);
+  renderSymbols(d);
+  renderSummary(d);
+
+  // update badges
+  setBadge('badgeTokens',  d.tokens?.length || 0);
+  setBadge('badgeSymbols', Object.keys(d.symbol_table || {}).length);
+  const totalErr = (d.lex_errors||[]).length + (d.parse_errors||[]).length + (d.sem_errors||[]).length;
+  setBadge('badgeSem', totalErr || '', totalErr > 0);
+
+  if (d.executed) {
+    const n = (d.exe_output||[]).length;
+    setBadge('badgeConsole', n);
+  }
+
+  // status
+  if (d.exe_errors?.length) {
+    setStatus('Runtime error: ' + d.exe_errors[0], 'fail');
+  } else if (d.executed) {
+    setStatus(`Executed — ${(d.exe_output||[]).length} line(s) of output`, 'ok');
+    switchTab('console', document.querySelector('.tab-btn'));
+  } else if (d.success) {
+    setStatus('Compilation successful', 'ok');
+  } else {
+    const n = (d.lex_errors||[]).length + (d.parse_errors||[]).length + (d.sem_errors||[]).length;
+    setStatus(`Compilation failed — ${n} error(s)`, 'fail');
+  }
+}
+
+/* ── console */
+function renderConsole(d) {
+  const el = document.getElementById('consoleOut');
+  let html = '';
+
+  const parser = d.parser_type === 'topdown' ? 'Top-Down' : 'Bottom-Up';
+  html += `<div class="console-header">── ${esc(parser)} Parser ──────────────────────</div>`;
+
+  // compilation errors
+  const allErrs = [...(d.lex_errors||[]), ...(d.parse_errors||[]), ...(d.sem_errors||[])];
+  if (allErrs.length) {
+    allErrs.forEach(e => {
+      html += `<div class="console-line"><span class="prompt">✕</span><span class="err-out">${esc(e)}</span></div>`;
+    });
+  }
+
+  if (d.sem_warnings?.length) {
+    d.sem_warnings.forEach(w => {
+      html += `<div class="console-line"><span class="prompt" style="color:#fde68a">⚠</span><span style="color:#fde68a">${esc(w)}</span></div>`;
+    });
+  }
+
+  if (d.executed) {
+    html += `<hr class="console-divider"/>`;
+    html += `<div class="console-header">── Program Output ───────────────────────────</div>`;
+    if (d.exe_output?.length) {
+      d.exe_output.forEach(line => {
+        html += `<div class="console-line"><span class="prompt">›</span><span class="out">${esc(line)}</span></div>`;
+      });
+    } else {
+      html += `<div class="console-empty">  (no output produced)</div>`;
+    }
+    if (d.exe_errors?.length) {
+      html += `<hr class="console-divider"/>`;
+      d.exe_errors.forEach(e => {
+        html += `<div class="console-line"><span class="prompt">✕</span><span class="err-out">Runtime: ${esc(e)}</span></div>`;
+      });
+    }
+  } else if (!allErrs.length) {
+    html += `<hr class="console-divider"/>`;
+    html += `<div class="console-empty">  Compiled OK. Click ⚡ Run Code to execute.</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+/* ── tokens */
+function renderTokens(d) {
+  const toks = d.tokens || [];
+  if (!toks.length) return;
+  let html = `<table class="token-table"><thead><tr>
+    <th>#</th><th>Type</th><th>Value</th><th>Line</th><th>Col</th>
+  </tr></thead><tbody>`;
+  toks.forEach((t, i) => {
+    if (t.type === 'EOF') return;
+    html += `<tr>
+      <td class="tok-num">${i+1}</td>
+      <td class="token-type">${esc(t.type)}</td>
+      <td class="token-val">${esc(t.value === 'EOF' ? '' : t.value)}</td>
+      <td class="tok-num">${t.line}</td>
+      <td class="tok-num">${t.col}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('tokenContent').innerHTML = html;
+}
+
+/* ── AST */
+function renderAST(d) {
+  const el = document.getElementById('astContent');
+  if (d.ast_text) {
+    // colour the AST
+    let s = esc(d.ast_text)
+      .replace(/\b(Program|Block)\b/g,           '<span style="color:#60a5fa;font-weight:600">$1</span>')
+      .replace(/\b(DeclStmt|AssignStmt)\b/g,      '<span style="color:#c084fc">$1</span>')
+      .replace(/\b(IfStmt|WhileStmt|PrintStmt)\b/g,'<span style="color:#f472b6">$1</span>')
+      .replace(/\b(BinaryExpr|UnaryExpr)\b/g,     '<span style="color:#fbbf24">$1</span>')
+      .replace(/\b(Literal)\b/g,                  '<span style="color:#86efac">$1</span>')
+      .replace(/\b(Identifier)\b/g,               '<span style="color:#67e8f9">$1</span>')
+      .replace(/\[(\w+)\]/g, '[<span style="color:#60a5fa">$1</span>]');
+    el.innerHTML = s;
+  } else {
+    el.textContent = d.parse_errors?.length
+      ? 'AST not generated (parse errors).'
+      : 'Compile to see AST…';
+  }
+}
+
+/* ── parse steps */
+function renderSteps(d) {
+  const el = document.getElementById('stepsContent');
+  if (!d.parse_steps?.length) { el.textContent = 'Parse steps appear here…'; return; }
+  el.innerHTML = d.parse_steps.map(line => {
+    const e = esc(line);
+    if (line.includes('╔') || line.includes('╚') || line.includes('║'))
+      return `<span class="step-hdr">${e}</span>`;
+    if (line.includes('SHIFT'))   return `<span class="step-shift">${e}</span>`;
+    if (line.includes('REDUCE'))  return `<span class="step-reduce">${e}</span>`;
+    if (line.includes('ACCEPT'))  return `<span class="step-accept">${e}</span>`;
+    if (line.includes('[ERROR]') || line.includes('ERROR'))
+      return `<span class="step-err">${e}</span>`;
+    if (line.includes('►'))       return `<span class="step-rule">${e}</span>`;
+    if (line.includes('✓'))       return `<span class="step-ok">${e}</span>`;
+    return `<span class="step-dim">${e}</span>`;
+  }).join('\n');
+}
+
+/* ── semantic */
+function renderSemantic(d) {
+  const cont = document.getElementById('semContent');
+  const errs  = d.sem_errors   || [];
+  const warns = d.sem_warnings || [];
+  const log   = d.sem_log      || [];
+
+  if (!log.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="big-icon">✔</div><p>Semantic results appear here.</p></div>`;
+    return;
+  }
+
+  let html = '<div class="msg-list">';
+  errs.forEach(e =>  { html += `<div class="msg-chip err"><span class="msg-icon">✕</span><span class="msg-text">${esc(e)}</span></div>`; });
+  warns.forEach(w => { html += `<div class="msg-chip warn"><span class="msg-icon">⚠</span><span class="msg-text">${esc(w)}</span></div>`; });
+  if (!errs.length && !warns.length) {
+    html += `<div class="msg-chip ok"><span class="msg-icon">✔</span><span class="msg-text">No semantic errors detected.</span></div>`;
+  }
+  html += '</div>';
+
+  // log
+  html += `<pre class="code-block" style="margin-top:12px;flex:1">`;
+  html += log.map(line => {
+    const e = esc(line);
+    if (line.includes('╔') || line.includes('╚') || line.includes('║')) return `<span style="color:#60a5fa">${e}</span>`;
+    if (line.includes('[ERROR]'))   return `<span style="color:#f87171">${e}</span>`;
+    if (line.includes('[WARN]'))    return `<span style="color:#fde68a">${e}</span>`;
+    if (line.includes('Defined'))   return `<span style="color:#86efac">${e}</span>`;
+    if (line.includes('──►') || line.includes('◄──')) return `<span style="color:#60a5fa">${e}</span>`;
+    return `<span style="color:#64748b">${e}</span>`;
+  }).join('\n');
+  html += '</pre>';
+
+  cont.innerHTML = html;
+}
+
+/* ── symbols */
+function renderSymbols(d) {
+  const syms = d.symbol_table || {};
+  const keys = Object.keys(syms);
+  if (!keys.length) {
+    document.getElementById('symContent').innerHTML =
+      `<div class="empty-state"><div class="big-icon">⊗</div><p>No symbols declared.</p></div>`;
+    return;
+  }
+  let html = `<table class="sym-table"><thead><tr>
+    <th>#</th><th>Variable</th><th>Type</th><th>Declared</th>
+  </tr></thead><tbody>`;
+  keys.forEach((name, i) => {
+    const info  = syms[name];                    // e.g. "int   (line 2)"
+    const match = info.match(/^(\w+)\s+\(line\s+(\d+)\)/);
+    const type  = match ? match[1] : info;
+    const line  = match ? match[2] : '—';
+    html += `<tr>
+      <td class="tok-num">${i+1}</td>
+      <td class="sym-name">${esc(name)}</td>
+      <td class="sym-type">${esc(type)}</td>
+      <td class="sym-line">line ${esc(line)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('symContent').innerHTML = html;
+}
+
+/* ── summary */
+function renderSummary(d) {
+  const lexOk   = !(d.lex_errors?.length);
+  const parseOk = !(d.parse_errors?.length) && !!d.ast_text;
+  const semOk   = !(d.sem_errors?.length) && !!(d.sem_log?.length);
+  const semRan  = !!(d.sem_log?.length);
+  const exeRan  = !!d.executed;
+  const exeOk   = exeRan && !(d.exe_errors?.length);
+
+  function phase(name, ok, ran, detail, badgeText) {
+    const state = ran ? (ok ? 'pass' : 'fail') : 'skip';
+    return `<div class="phase-row">
+      <div class="phase-dot ${state}"></div>
+      <div class="phase-name">${name}</div>
+      <div class="phase-detail">${esc(detail)}</div>
+      <span class="phase-badge ${state}">${badgeText}</span>
+    </div>`;
+  }
+
+  let html = '<div class="phase-grid">';
+  html += phase('Phase 1 – Lexical Analysis',
+    lexOk, true,
+    lexOk ? `${(d.tokens||[]).length} tokens` : `${d.lex_errors.length} error(s)`,
+    lexOk ? 'PASS' : 'FAIL');
+
+  html += phase('Phase 2 – Syntax Analysis',
+    parseOk, lexOk,
+    parseOk ? 'AST built' : d.parse_errors?.length ? `${d.parse_errors.length} error(s)` : 'skipped',
+    parseOk ? 'PASS' : lexOk ? 'FAIL' : 'SKIP');
+
+  html += phase('Phase 3 – Semantic Analysis',
+    semOk, semRan,
+    semRan ? (semOk ? `${Object.keys(d.symbol_table||{}).length} symbol(s), ${d.sem_warnings?.length||0} warning(s)` : `${d.sem_errors.length} error(s)`) : 'skipped',
+    semRan ? (semOk ? 'PASS' : 'FAIL') : 'SKIP');
+
+  html += phase('Phase 4 – Execution',
+    exeOk, exeRan,
+    exeRan ? (exeOk ? `${(d.exe_output||[]).length} line(s) output` : d.exe_errors?.[0] || 'runtime error') : 'click ⚡ Run Code',
+    exeRan ? (exeOk ? 'PASS' : 'FAIL') : 'SKIP');
+
+  html += '</div>';
+
+  html += d.success
+    ? `<div class="result-banner ok"><span class="big">✔</span> Compilation SUCCESSFUL</div>`
+    : `<div class="result-banner fail"><span class="big">✕</span> Compilation FAILED</div>`;
+
+  document.getElementById('summaryContent').innerHTML = html;
+}
+
+/* ────────────────────────────────── example code */
+const EXAMPLE = `// ╔══════════════════════════════════════════════╗
+// ║       Python Compiler IDE  –  Demo           ║
+// ║   Click  ⚡ Run Code  to execute this!        ║
+// ╚══════════════════════════════════════════════╝
+
+// ── 1. All four data types ───────────────────────
+int    age     = 20;
+float  gpa     = 3.75;
+string name    = "Alice";
+bool   passing = true;
+
+print("=== Student Report ===");
+print(name);
+print(age);
+print(gpa);
+
+// ── 2. Arithmetic operations ─────────────────────
+int  a      = 12;
+int  b      = 5;
+int  sum    = a + b;
+int  diff   = a - b;
+int  prod   = a * b;
+int  modulo = a % b;
+
+print("=== Arithmetic ===");
+print(sum);
+print(diff);
+print(prod);
+print(modulo);
+
+// ── 3. if / else branching ───────────────────────
+print("=== Grade Check ===");
+if (gpa >= 3.5) {
+    print("Distinction");
+} else {
+    print("Pass");
+}
+
+// ── 4. Boolean logic ─────────────────────────────
+bool honours = passing && gpa >= 3.5;
+if (honours) {
+    print("Honours student!");
+}
+
+// ── 5. while loop  (sum 1..10) ───────────────────
+print("=== Sum 1 to 10 ===");
+int total = 0;
+int i     = 1;
+while (i <= 10) {
+    total = total + i;
+    i     = i + 1;
+}
+print(total);
+
+// ── 6. Nested blocks and scoping ─────────────────
+print("=== Countdown ===");
+int n = 5;
+while (n > 0) {
+    if (n == 1) {
+        print("Go!");
+    } else {
+        print(n);
+    }
+    n = n - 1;
+}
+
+// ── 7. String variable ────────────────────────────
+string farewell = "Compilation complete!";
+print(farewell);
+`;
+
+function loadExample() {
+  document.getElementById('codeEditor').value = EXAMPLE;
+  onEditorChange();
+  setStatus('Example loaded — click ▶ Compile or ⚡ Run Code', 'idle');
+  showToast('Example code loaded! Click ⚡ Run Code to execute it.');
+  // scroll editor to top
+  const ta = document.getElementById('codeEditor');
+  ta.scrollTop = 0;
+  ta.focus();
+}
+
+function clearAll() {
+  document.getElementById('codeEditor').value = '';
+  onEditorChange();
+  document.getElementById('consoleOut').innerHTML =
+    '<div class="console-empty">Click ▶ Compile or ⚡ Run Code to see output here…</div>';
+  document.getElementById('tokenContent').innerHTML =
+    '<div class="empty-state"><div class="big-icon">#</div><p>Tokens appear here after compilation.</p></div>';
+  document.getElementById('astContent').textContent  = 'AST appears here after compilation…';
+  document.getElementById('stepsContent').textContent = 'Parse trace appears here after compilation…';
+  document.getElementById('semContent').innerHTML =
+    '<div class="empty-state"><div class="big-icon">✔</div><p>Semantic analysis results appear here.</p></div>';
+  document.getElementById('symContent').innerHTML =
+    '<div class="empty-state"><div class="big-icon">⊗</div><p>Declared variables appear here after compilation.</p></div>';
+  document.getElementById('summaryContent').innerHTML =
+    '<div class="empty-state"><div class="big-icon">≡</div><p>Compilation summary appears here.</p></div>';
+  ['statTokens','statLines','statErrors','statSymbols'].forEach(id => {
+    document.getElementById(id).textContent = '0';
+    document.getElementById(id).classList.remove('has-error');
+  });
+  ['badgeConsole','badgeTokens','badgeSem','badgeSymbols'].forEach(id => {
+    document.getElementById(id).textContent = '';
+  });
+  setStatus('Ready — write some code and click Compile', 'idle');
+  lastResult = null;
+}
+
+/* ────────────────────────────────── export */
+function exportResults() {
+  if (!lastResult) { alert('Compile first before exporting.'); return; }
+  const d = lastResult;
+  let txt = '═══════════════════════════════════════════════\n';
+  txt += '  PYTHON COMPILER IDE – RESULTS EXPORT\n';
+  txt += '═══════════════════════════════════════════════\n\n';
+
+  txt += '── COMPILATION STATS ──────────────────────────\n';
+  txt += `  Tokens : ${(d.tokens||[]).length}\n`;
+  txt += `  Lines  : ${d.stats?.lines || 0}\n`;
+  txt += `  Errors : ${d.stats?.errors || 0}\n`;
+  txt += `  Symbols: ${Object.keys(d.symbol_table||{}).length}\n\n`;
+
+  if (d.exe_output?.length) {
+    txt += '── PROGRAM OUTPUT ─────────────────────────────\n';
+    d.exe_output.forEach(l => { txt += `  ${l}\n`; });
+    txt += '\n';
+  }
+
+  const allErrs = [...(d.lex_errors||[]),...(d.parse_errors||[]),...(d.sem_errors||[]),...(d.exe_errors||[])];
+  if (allErrs.length) {
+    txt += '── ERRORS ─────────────────────────────────────\n';
+    allErrs.forEach(e => { txt += `  ✕ ${e}\n`; });
+    txt += '\n';
+  }
+
+  if (d.ast_text) {
+    txt += '── ABSTRACT SYNTAX TREE ───────────────────────\n';
+    txt += d.ast_text + '\n\n';
+  }
+
+  if (Object.keys(d.symbol_table||{}).length) {
+    txt += '── SYMBOL TABLE ───────────────────────────────\n';
+    Object.entries(d.symbol_table).forEach(([k,v]) => { txt += `  ${k.padEnd(16)} ${v}\n`; });
+    txt += '\n';
+  }
+
+  const blob = new Blob([txt], {type:'text/plain'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'compiler_results.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ────────────────────────────────── toast */
+let toastTimer = null;
+function showToast(msg, duration = 3000) {
+  const toast   = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  toastMsg.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+/* ────────────────────────────────── init */
+window.onload = () => { loadExample(); };
+</script>
+</body>
+</html>
