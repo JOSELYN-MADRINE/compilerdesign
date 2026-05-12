@@ -11,80 +11,102 @@ from typing       import Dict, Any
 
 # ═══════════════════════════════════════════════════════════════ AST printer ═
 
-def format_ast(node: ASTNode, indent: int = 0) -> str:
-    pad = "  " * indent
+def format_ast(node: ASTNode, prefix: str = "", is_last: bool = True, is_root: bool = True) -> str:
+    """Format an AST node as a hierarchical tree string."""
     if node is None:
-        return f"{pad}None"
+        return f"{prefix}{'└── ' if is_last else '├── '}None"
+
+    # Don't draw branch for the root node
+    if is_root:
+        branch = ""
+        child_prefix = prefix
+    else:
+        branch = "└── " if is_last else "├── "
+        child_prefix = prefix + ("    " if is_last else "│   ")
+
+    def format_children(children_items):
+        """Helper to format a list of (label, child_node) or just child_nodes."""
+        lines = []
+        for i, item in enumerate(children_items):
+            is_last_child = (i == len(children_items) - 1)
+            
+            if isinstance(item, tuple):
+                label, child = item
+                if child is not None:
+                    # For labeled children (like 'condition:', 'then:')
+                    lines.append(f"{child_prefix}{'└── ' if is_last_child else '├── '}{label}")
+                    sub_prefix = child_prefix + ("    " if is_last_child else "│   ")
+                    # Pass is_root=False for all nested calls
+                    lines.append(format_ast(child, sub_prefix, True, False))
+            else:
+                # Pass is_root=False for all nested children
+                lines.append(format_ast(item, child_prefix, is_last_child, False))
+        return lines
 
     if isinstance(node, Program):
-        lines = [f"{pad}Program"]
-        for s in node.statements:
-            lines.append(format_ast(s, indent + 1))
-        return '\n'.join(lines)
+        result = [f"{prefix}{branch}Program"]
+        result.extend(format_children(node.statements))
+        return '\n'.join(result)
 
     if isinstance(node, Block):
-        lines = [f"{pad}Block"]
-        for s in node.statements:
-            lines.append(format_ast(s, indent + 1))
-        return '\n'.join(lines)
+        result = [f"{prefix}{branch}Block"]
+        result.extend(format_children(node.statements))
+        return '\n'.join(result)
 
     if isinstance(node, DeclStmt):
-        head = f"{pad}DeclStmt [{node.var_type}] {node.name}"
+        result = [f"{prefix}{branch}DeclStmt [{node.var_type}] {node.name}"]
         if node.initializer:
-            return head + "\n" + format_ast(node.initializer, indent + 1)
-        return head
+            result.extend(format_children([node.initializer]))
+        return '\n'.join(result)
 
     if isinstance(node, AssignStmt):
-        return (f"{pad}AssignStmt {node.name} =\n"
-                + format_ast(node.value, indent + 1))
+        result = [f"{prefix}{branch}AssignStmt {node.name} ="]
+        result.extend(format_children([node.value]))
+        return '\n'.join(result)
 
     if isinstance(node, IfStmt):
-        parts = [f"{pad}IfStmt",
-                 f"{pad}  condition:",
-                 format_ast(node.condition, indent + 2),
-                 f"{pad}  then:",
-                 format_ast(node.then_block, indent + 2)]
+        result = [f"{prefix}{branch}IfStmt"]
+        children = [("condition:", node.condition), ("then:", node.then_block)]
         if node.else_block:
-            parts += [f"{pad}  else:",
-                      format_ast(node.else_block, indent + 2)]
-        return '\n'.join(parts)
+            children.append(("else:", node.else_block))
+        result.extend(format_children(children))
+        return '\n'.join(result)
 
     if isinstance(node, WhileStmt):
-        return '\n'.join([
-            f"{pad}WhileStmt",
-            f"{pad}  condition:",
-            format_ast(node.condition, indent + 2),
-            f"{pad}  body:",
-            format_ast(node.body, indent + 2),
-        ])
+        result = [f"{prefix}{branch}WhileStmt"]
+        children = [("condition:", node.condition), ("body:", node.body)]
+        result.extend(format_children(children))
+        return '\n'.join(result)
 
     if isinstance(node, PrintStmt):
-        return f"{pad}PrintStmt\n" + format_ast(node.value, indent + 1)
+        result = [f"{prefix}{branch}PrintStmt"]
+        result.extend(format_children([node.value]))
+        return '\n'.join(result)
 
     if isinstance(node, BinaryExpr):
-        return '\n'.join([
-            f"{pad}BinaryExpr ( {node.op} )",
-            format_ast(node.left,  indent + 1),
-            format_ast(node.right, indent + 1),
-        ])
+        result = [f"{prefix}{branch}BinaryExpr ( {node.op} )"]
+        result.extend(format_children([node.left, node.right]))
+        return '\n'.join(result)
 
     if isinstance(node, UnaryExpr):
-        return f"{pad}UnaryExpr ( {node.op} )\n" + format_ast(node.operand, indent + 1)
+        result = [f"{prefix}{branch}UnaryExpr ( {node.op} )"]
+        result.extend(format_children([node.operand]))
+        return '\n'.join(result)
 
     if isinstance(node, NumberLiteral):
         t = 'int' if node.is_int else 'float'
-        return f"{pad}Literal [{t}] {node.value}"
+        return f"{prefix}{branch}Literal [{t}] {node.value}"
 
     if isinstance(node, StringLiteral):
-        return f'{pad}Literal [string] "{node.value}"'
+        return f'{prefix}{branch}Literal [string] "{node.value}"'
 
     if isinstance(node, BoolLiteral):
-        return f"{pad}Literal [bool] {node.value}"
+        return f"{prefix}{branch}Literal [bool] {node.value}"
 
     if isinstance(node, Identifier):
-        return f"{pad}Identifier  {node.name}"
+        return f"{prefix}{branch}Identifier {node.name}"
 
-    return f"{pad}{type(node).__name__}"
+    return f"{prefix}{branch}{type(node).__name__}"
 
 
 # ═══════════════════════════════════════════════════════════════ Compiler ════
@@ -120,7 +142,7 @@ class Compiler:
         if lex_errors:
             return results
 
-        # ── Phase 2: Syntax Analysis ──────────────────────────────────────────
+        # ── Phase 2: Syntax Analysis ────────────
         parser = (TopDownParser(tokens)
                   if parser_type == 'topdown'
                   else BottomUpParser(tokens))
