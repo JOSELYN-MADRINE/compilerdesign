@@ -23,7 +23,7 @@ def index():
 def compile_route():
     data        = request.get_json(force=True)
     source      = data.get('source', '')
-    parser_type = 'auto'
+    parser_type = 'topdown'
     execute     = data.get('execute', False)
 
     if not source.strip():

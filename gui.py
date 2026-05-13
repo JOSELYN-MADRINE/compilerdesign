@@ -109,20 +109,8 @@ class CompilerIDE:
 
         self._sep(bar)
 
-        # ── parser selection ─────────────────────────────────────────────────
-        # tk.Label(bar, text="Parser:", bg=BG_PANEL, fg=FG_DIM,
-        #          font=self.sans).pack(side=tk.LEFT, padx=(10, 4), pady=10)
-
+        # Parser mode is fixed to top-down recursive descent.
         self.parser_var = tk.StringVar(value="topdown")
-        # rb_kw = dict(bg=BG_PANEL, fg=FG_TEXT, selectcolor=BG_DARK,
-        #              activebackground=BG_PANEL, activeforeground=ACCENT,
-        #              font=self.sans, relief=tk.FLAT)
-        # tk.Radiobutton(bar, text="Top-Down",  variable=self.parser_var,
-        #                value="topdown",  **rb_kw).pack(side=tk.LEFT, padx=4)
-        # tk.Radiobutton(bar, text="Bottom-Up", variable=self.parser_var,
-        #                value="bottomup", **rb_kw).pack(side=tk.LEFT, padx=4)
-
-        # self._sep(bar)
 
         # ── action buttons ───────────────────────────────────────────────────
         self._btn(bar, "▶  Run All Phases", self.run_all,
@@ -449,11 +437,10 @@ class CompilerIDE:
             return
         from lexer     import Lexer
         from parser_td import TopDownParser
-        from parser_bu import BottomUpParser
         from compiler  import format_ast
         toks, lex_errs = Lexer(src).tokenize()
-        pt = self.parser_var.get()
-        parser = TopDownParser(toks) if pt == 'topdown' else BottomUpParser(toks)
+        pt = 'topdown'
+        parser = TopDownParser(toks)
         ast, p_errs, steps = parser.parse()
         res = dict(tokens=toks, lex_errors=lex_errs, parser_type=pt,
                    ast=ast, ast_text=format_ast(ast) if ast else '',
@@ -585,9 +572,7 @@ class CompilerIDE:
     def _render_steps(self, res: dict) -> None:
         w = self.w_steps
         self._clear_output(w)
-        pt = res.get('parser_type', 'topdown')
-        label = "Top-Down (Recursive Descent)" if pt == 'topdown' \
-                else "Bottom-Up (Shift-Reduce)"
+        label = "Top-Down (Recursive Descent)"
         self._write(w, f"SYNTAX ANALYSIS  –  {label}\n\n", "hdr")
 
         for e in res.get('parse_errors', []):
@@ -680,9 +665,7 @@ class CompilerIDE:
         self._clear_output(w)
         self._write(w, "COMPILATION SUMMARY\n\n", "hdr")
 
-        pt = res.get('parser_type', 'topdown')
-        label = "Top-Down (Recursive Descent)" if pt == 'topdown' \
-                else "Bottom-Up (Shift-Reduce)"
+        label = "Top-Down (Recursive Descent)"
         self._write(w, f"Parser used:  {label}\n\n", "dim")
 
         # Phase 1

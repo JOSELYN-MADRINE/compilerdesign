@@ -1101,7 +1101,7 @@ function renderConsole(d) {
   const el = document.getElementById('consoleOut');
   let html = '';
 
-  const parser = d.parser_type === 'topdown' ? 'Top-Down' : 'Bottom-Up';
+  const parser = 'Top-Down';
   html += `<div class="console-header">── ${esc(parser)} Parser ──────────────────────</div>`;
 
   function phaseLabel(item) {

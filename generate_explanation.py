@@ -148,7 +148,7 @@ def build():
         'This project is a four-phase compiler implemented entirely in Python. '
         'It accepts a simple C-like programming language and processes source code '
         'through each classical compiler stage: Lexical Analysis, Syntax Analysis '
-        '(with two different parser strategies), Semantic Analysis, and optional '
+        '(using a recursive-descent parser), Semantic Analysis, and optional '
         'Execution via a tree-walking interpreter. '
         'A web-based IDE (Flask + HTML/CSS/JS) and a desktop GUI (Tkinter) are '
         'provided so users can write, compile, and run programs interactively.')
@@ -162,8 +162,7 @@ def build():
          '(keywords, identifiers, numbers, strings, operators, punctuation).'),
         ('Phase 2 – Syntax Analysis',
          'Checks that the token stream follows the grammar of the language and '
-         'builds an Abstract Syntax Tree (AST). Two parser strategies are '
-         'implemented: Top-Down (Recursive Descent) and Bottom-Up (Shift-Reduce).'),
+         'builds an Abstract Syntax Tree (AST) using Top-Down (Recursive Descent) parsing.'),
         ('Phase 3 – Semantic Analysis',
          'Walks the AST and enforces meaning rules: variables must be declared '
          'before use, types must be compatible, no duplicate declarations in the '
@@ -198,7 +197,6 @@ def build():
         ('lexer.py',     'Lexer – Phase 1'),
         ('ast_nodes.py', 'All AST node dataclasses'),
         ('parser_td.py', 'TopDownParser – Phase 2 (Recursive Descent)'),
-        ('parser_bu.py', 'BottomUpParser – Phase 2 (Shift-Reduce)'),
         ('semantic.py',  'SemanticAnalyzer, SymbolTable – Phase 3'),
         ('interpreter.py','Interpreter – Phase 4'),
         ('compiler.py',  'Compiler orchestrator – runs all four phases'),
@@ -489,88 +487,22 @@ print(farewell);'''
     ], header1='Parser Action', header2='Detail', w1=3.2, w2=3.3)
 
     doc.add_paragraph()
-    heading(doc, '4.3  Strategy B — Bottom-Up Parser (Shift-Reduce)', 2)
+    heading(doc, '4.3  Reading the Recursive-Descent Trace', 2)
     body(doc,
-        'The BottomUpParser in parser_bu.py implements a Shift-Reduce parser '
-        '(LR-style). Instead of starting at the top, it starts at the leaves '
-        '(the tokens) and works upward, combining symbols into larger structures '
-        'until only the start symbol remains.')
-    doc.add_paragraph()
-    body(doc, 'Two fundamental operations drive the algorithm:', bold=True)
-    two_col(doc, [
-        ('SHIFT',  'Push the current input token onto the parse stack and advance the input pointer. '
-                   'Logged as:  SHIFT  │  TOKEN_TYPE   \'value\''),
-        ('REDUCE', 'When the top of the stack matches the right-hand side of a grammar production, '
-                   'pop those symbols and push the corresponding non-terminal (AST node). '
-                   'Logged as:  REDUCE │  rule_name'),
-    ], header1='Operation', header2='Meaning', w1=1.2, w2=5.3)
-
-    doc.add_paragraph()
-    body(doc, 'Shift-Reduce trace for  int age = 20;:', bold=True)
+        'The parse-step log in the IDE is a direct view of recursive-descent '
+        'control flow: lines prefixed with "►" indicate a rule decision, and '
+        'lines with "✓" indicate that a rule has completed successfully.')
     doc.add_paragraph()
     two_col(doc, [
-        ('SHIFT   KW_INT   "int"',          'Token "int" pushed onto stack'),
-        ('SHIFT   IDENTIFIER   "age"',       'Token "age" pushed onto stack'),
-        ('SHIFT   ASSIGN   "="',             'Token "=" pushed onto stack'),
-        ('SHIFT   INT_LITERAL   "20"',       'Token "20" pushed onto stack'),
-        ('REDUCE  primary → INT(20)',         'NumberLiteral(20) replaces "20" on stack'),
-        ('REDUCE  unary → primary',           'Unary wrapper (no operator, passes through)'),
-        ('REDUCE  mul_expr → unary',          'mul_expr non-terminal formed'),
-        ('REDUCE  add_expr → mul_expr',       'add_expr non-terminal formed'),
-        ('REDUCE  ... → add_expr',            '(rel, eq, and, or all pass through similarly)'),
-        ('SHIFT   SEMICOLON   ";"',           'Semicolon consumed'),
-        ('REDUCE  decl_stmt → int ID = <expr> ;', 'DeclStmt(int, age, NumberLiteral(20)) formed'),
-        ('REDUCE  stmt_list → stmt_list stmt','Statement added to program list'),
-    ], header1='Action', header2='Effect', w1=3.0, w2=3.5)
-
-    doc.add_paragraph()
-    heading(doc, '4.4  Comparing the Two Parsers', 2)
-    two_col(doc, [
-        ('',               'Top-Down (Recursive Descent)      vs.      Bottom-Up (Shift-Reduce)'),
-        ('Starting point', 'Start symbol (program)',              ),
-        ('Direction',      'Predict → expand downward',           ),
-        ('Token handling', 'Consume token when rule expects it',  ),
-        ('Log style',      '► predicted rule / ✓ completed rule', ),
-        ('Strength',       'Easy to write; clear error messages', ),
-        ('AST produced',   'Identical in both cases',             ),
-    ], header1='Aspect', header2='Comparison', w1=2.0, w2=4.5)
-
-    # Redo as a proper comparison table
-    doc.paragraphs[-1]._element.getparent().remove(doc.paragraphs[-1]._element)
-    tbl2 = doc.add_table(rows=8, cols=3)
-    tbl2.style = 'Table Grid'
-    hdrs = ['Aspect', 'Top-Down (Recursive Descent)', 'Bottom-Up (Shift-Reduce)']
-    for ci, h in enumerate(hdrs):
-        c = tbl2.rows[0].cells[ci]
-        c.text = h
-        c.paragraphs[0].runs[0].bold = True
-        c.paragraphs[0].runs[0].font.size = Pt(10)
-        set_cell_bg(c, '1F4E79')
-        c.paragraphs[0].runs[0].font.color.rgb = RGBColor(0xFF,0xFF,0xFF)
-    rows_data = [
-        ('Starting point', 'Start symbol (program)',              'Leaves (individual tokens)'),
-        ('Direction',      'Expand downward',                     'Combine upward'),
-        ('Token use',      'Consume when rule expects it',        'SHIFT onto stack; REDUCE when top matches RHS'),
-        ('Log style',      '► predicted / ✓ completed',           'SHIFT │ TOKEN … / REDUCE │ rule …'),
-        ('Grammar visible?','No (implicit in call stack)',        'Yes — displayed at parse start'),
-        ('Strength',       'Easy to read; clear error messages',  'Explicit shift/reduce trace; shows LR concept'),
-        ('AST output',     'Identical program tree',              'Identical program tree'),
-    ]
-    for i, (a, b, c2) in enumerate(rows_data):
-        bg = 'EBF3FB' if i % 2 == 0 else 'FFFFFF'
-        for ci, v in enumerate([a, b, c2]):
-            cell = tbl2.rows[i+1].cells[ci]
-            cell.text = v
-            set_cell_bg(cell, bg)
-            for run in cell.paragraphs[0].runs:
-                run.font.size = Pt(9)
-    for ci, w in enumerate([1.5, 2.5, 2.5]):
-        set_col_width(tbl2, ci, w)
+        ('► rule_name', 'Parser entered a grammar rule and started matching it.'),
+        ('✓ rule_name', 'Parser finished that rule and returned to its caller.'),
+        ('[ERROR] ...', 'A syntax error was detected; panic-mode recovery may follow.'),
+    ], header1='Trace marker', header2='Meaning', w1=2.1, w2=4.4)
 
     doc.add_paragraph()
     heading(doc, '4.5  The Abstract Syntax Tree for the Example Program', 2)
     body(doc,
-        'After parsing, both parsers produce the same AST. Below is the '
+        'After parsing, the recursive-descent parser produces the AST. Below is the '
         'tree for the first four statements (variable declarations):')
     doc.add_paragraph()
     code_block(doc, '''\
@@ -828,9 +760,9 @@ Program
         ('Example button',         'Loads the full demo program into the editor.'),
         ('▶  Compile button',      'Runs Phases 1–3 (Lex → Parse → Semantic). No execution.'),
         ('⚡  Run Code button',    'Runs all four phases including execution; output appears in the Console tab.'),
-        ('Parser selector',        'Switch between Top-Down and Bottom-Up to compare their parse-step logs.'),
+        ('Parser mode',            'Uses Top-Down (Recursive Descent) parsing.'),
         ('Tokens tab',             'Shows every token with its type, value, line, and column.'),
-        ('Parse Steps tab',        'Full shift/reduce or predict/expand trace.'),
+        ('Parse Steps tab',        'Full recursive-descent trace (predict/expand and completion markers).'),
         ('AST tab',                'Pretty-printed Abstract Syntax Tree.'),
         ('Semantic tab',           'Analyser log with scope entry/exit and any errors or warnings.'),
         ('Symbol Table tab',       'All declared variables with their types and declaration lines.'),

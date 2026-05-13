@@ -229,7 +229,6 @@ def build():
         ("5.", "Phase 1 – Lexical Analysis"),
         ("6.", "Phase 2 – Syntax Analysis"),
         ("  6.1", "Top-Down Parser (Recursive Descent)"),
-        ("  6.2", "Bottom-Up Parser (Shift-Reduce)"),
         ("7.", "Phase 3 – Semantic Analysis"),
         ("8.", "Abstract Syntax Tree (AST)"),
         ("9.", "Symbol Table"),
@@ -263,7 +262,7 @@ def build():
     doc.add_paragraph()
     body(doc, "Key features at a glance:", bold=True)
     bullet(doc, "Three-phase compiler pipeline (Lexer → Parser → Semantic Analyser)")
-    bullet(doc, "Two interchangeable parsers: Top-Down (LL) and Bottom-Up (LR/Shift-Reduce)")
+    bullet(doc, "Recursive-descent top-down parser with detailed trace output")
     bullet(doc, "Full Abstract Syntax Tree (AST) construction and pretty-printing")
     bullet(doc, "Scoped symbol table with type tracking")
     bullet(doc, "Detailed per-phase output visible in the GUI")
@@ -296,7 +295,6 @@ def build():
         ("lexer.py",     "Lexical analyser (Phase 1). Scans source text character-by-character and emits a stream of Token objects."),
         ("ast_nodes.py", "Dataclass definitions for every node type in the Abstract Syntax Tree."),
         ("parser_td.py", "Top-Down (Recursive Descent) parser (Phase 2a). Implements a hand-written LL parser that builds the AST."),
-        ("parser_bu.py", "Bottom-Up (Shift-Reduce) parser (Phase 2b). Implements an LR-style parser that explicitly logs every SHIFT and REDUCE action."),
         ("semantic.py",  "Semantic analyser (Phase 3). Walks the AST to enforce type correctness and scoping rules."),
         ("compiler.py",  "Orchestrator that chains all three phases and exposes a single compile() method to the GUI."),
         ("gui.py",       "Tkinter IDE frontend. Main entry point — run this file to start the application."),
@@ -307,8 +305,7 @@ def build():
 gui.py
   └── compiler.py
         ├── lexer.py         (tokens.py)
-        ├── parser_td.py     (tokens.py, ast_nodes.py)
-        ├── parser_bu.py     (tokens.py, ast_nodes.py)
+    ├── parser_td.py     (tokens.py, ast_nodes.py)
         └── semantic.py      (ast_nodes.py)""")
 
     doc.add_page_break()
@@ -464,40 +461,14 @@ type        →  'int' | 'float' | 'string' | 'bool'""")
 
     doc.add_paragraph()
 
-    # ── 6.2 Bottom-Up ─────────────────────────────────────────────────────────
-    heading(doc, "6.2  Bottom-Up Parser — Shift-Reduce (parser_bu.py)", 2)
-    body(doc, "Strategy: scan tokens left-to-right, pushing (SHIFTing) them onto a stack. Whenever the top of the stack matches the right-hand side of a production rule, REDUCE: pop the matched symbols and push the resulting non-terminal. Repeat until the start symbol is on the stack.")
     doc.add_paragraph()
-    body(doc, "Characteristics:", bold=True)
-    bullet(doc, "LR-style — reads input left-to-right, rightmost derivation in reverse.")
-    bullet(doc, "More powerful than LL: can handle left-recursive grammars (expressed here in iterative loops).")
-    bullet(doc, "Every SHIFT and REDUCE operation is logged for full traceability in the GUI.")
-    bullet(doc, "Same error recovery strategy as the Top-Down parser.")
-    doc.add_paragraph()
-    body(doc, "Parse step log excerpt:", bold=True)
+    body(doc, "The parser trace is a recursive-descent walk through the grammar:", bold=True)
     code_block(doc, """\
-SHIFT   │ KW_INT               'int'
-SHIFT   │ IDENTIFIER           'x'
-SHIFT   │ ASSIGN               '='
-SHIFT   │ INT_LITERAL          '10'
-REDUCE  │ primary → INT(10)
-SHIFT   │ PLUS                 '+'
-SHIFT   │ INT_LITERAL          '5'
-REDUCE  │ primary → INT(5)
-REDUCE  │ add_expr → add_expr + mul_expr
-SHIFT   │ SEMICOLON            ';'
-REDUCE  │ decl_stmt → int ID = <expr> ;""")
-
-    doc.add_paragraph()
-    body(doc, "Comparison summary:", bold=True)
-    make_table(doc, [
-        ("Direction",      "Top-down (start → terminals)", "Bottom-up (terminals → start)"),
-        ("Derivation",     "Leftmost",                     "Rightmost (reversed)"),
-        ("Key operation",  "Predict & expand",             "Shift & reduce"),
-        ("Trace style",    "Rule predictions (►/✓)",       "SHIFT / REDUCE actions"),
-        ("Power",          "LL(1)",                        "LR-style (more expressive)"),
-        ("File",           "parser_td.py",                 "parser_bu.py"),
-    ], headers=("Aspect", "Top-Down", "Bottom-Up"), col_widths=(1.8, 2.8, 1.6))
+► program → stmt_list EOF
+  stmt → decl_stmt  [int at line 1]
+    ✓ primary → INT_LITERAL(10)
+    ✓ add_expr → expr + expr
+    ✓ decl_stmt → int x = <expr> ;""")
 
     doc.add_page_break()
 
@@ -633,10 +604,10 @@ Program
 
     heading(doc, "10.1  Layout", 2)
     two_col_table(doc, [
-        ("Toolbar",         "Run buttons, parser selector (Top-Down / Bottom-Up), Open/Save/Clear/Sample."),
+        ("Toolbar",         "Run buttons, parser mode fixed to Top-Down, Open/Save/Clear/Sample."),
         ("Source Editor",   "Monospace editor with line-number gutter and live syntax highlighting."),
         ("Tokens tab",      "Numbered table of every token: type, value, line, column."),
-        ("Parse Steps tab", "Full parse trace — predictions (top-down) or SHIFT/REDUCE log (bottom-up)."),
+        ("Parse Steps tab", "Full recursive-descent trace — predictions and rule completions."),
         ("AST tab",         "Indented pretty-print of the Abstract Syntax Tree."),
         ("Semantic tab",    "Analysis log with errors, warnings, and scope entry/exit markers."),
         ("Symbol Table tab","All declared variables with their types and source lines."),
@@ -767,7 +738,7 @@ bool b = 1 + 2;      // ERROR: cannot assign int to bool""")
     heading(doc, "13.2  Using the compiler step-by-step", 2)
     for n, step in enumerate([
         "Type or paste source code in the left editor panel.",
-        "Select a parser:  Top-Down (Recursive Descent)  or  Bottom-Up (Shift-Reduce).",
+        "Parsing always uses Top-Down (Recursive Descent).",
         "Click  Run All Phases  to execute all three compilation phases.",
         "Switch between the output tabs to inspect tokens, parse steps, AST, semantic results, symbol table, and summary.",
         "Use  Lexer Only,  Parser Only,  or  Semantic Only  to run individual phases.",
@@ -783,7 +754,7 @@ bool b = 1 + 2;      // ERROR: cannot assign int to bool""")
 from compiler import Compiler
 
 c   = Compiler()
-res = c.compile(source_code, parser_type='topdown')  # or 'bottomup'
+res = c.compile(source_code)
 
 # Phase outputs
 print(res['tokens'])        # list of Token objects
@@ -804,7 +775,7 @@ print(res['success'])       # True if all phases passed""")
     bullet(doc, "Functions / procedures are not supported in this version.")
     bullet(doc, "Arrays and composite data types are not yet implemented.")
     bullet(doc, "Only single-line // comments are supported (no block comments).")
-    bullet(doc, "The Bottom-Up parser uses the same recursive structure as the Top-Down parser to keep the implementation clear; a full LR(1) table-driven parser would require a parser-generator.")
+    bullet(doc, "Parsing is implemented with recursive descent only.")
 
     doc.add_paragraph()
     heading(doc, "14.2  Suggested extensions", 2)
@@ -812,7 +783,6 @@ print(res['success'])       # True if all phases passed""")
     bullet(doc, "Function declarations — def f(x: int): … with local scope and return type checking.")
     bullet(doc, "Arrays — int arr[10]; with bounds checking in the semantic phase.")
     bullet(doc, "For loops — for (init; cond; update) { … } syntax.")
-    bullet(doc, "Full LR(1) / LALR(1) table-driven bottom-up parser.")
     bullet(doc, "Type inference for var declarations.")
     bullet(doc, "Intermediate representation (three-address code or SSA).")
     bullet(doc, "Optimisation passes (constant folding, dead-code elimination).")

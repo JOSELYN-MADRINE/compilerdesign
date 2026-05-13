@@ -2,11 +2,9 @@
 
 from lexer        import Lexer
 from parser_td    import TopDownParser
-from parser_bu    import BottomUpParser
 from semantic     import SemanticAnalyzer
 from interpreter  import Interpreter
 from ast_nodes    import *
-from tokens       import TokenType
 from typing       import Dict, Any, List, Optional
 import re
 
@@ -254,10 +252,10 @@ def _classify_semantic_errors(errors: List[str], warnings: List[str]) -> List[Di
     return issues
 
 class Compiler:
-    def compile(self, source: str, parser_type: str = 'auto',
+    def compile(self, source: str, parser_type: str = 'topdown',
                 execute: bool = False) -> Dict[str, Any]:
         results: Dict[str, Any] = {
-            'parser_type':    parser_type,
+            'parser_type':    'topdown',
             'tokens':         [],
             'lex_errors':     [],
             'issues':         {'lexer': [], 'parser': [], 'semantic': [], 'warnings': [], 'runtime': []},
@@ -286,86 +284,15 @@ class Compiler:
             results['issues']['lexer'] = _classify_lexer_errors(lex_errors)
             return results
 
-        # ── Phase 2: Syntax Analysis with automatic parser selection ────────
-        chosen_parser = parser_type
+        # ── Phase 2: Syntax Analysis (recursive-descent top-down parser) ────
+        chosen_parser = 'topdown'
 
         def parse_with(parser_cls):
             parser = parser_cls(tokens)
             ast, errors, steps = parser.parse()
             return ast, errors, steps
 
-        def prefer_bottomup_first() -> bool:
-            """Use Bottom-Up first for code that looks more nested or operator-heavy."""
-            token_types = [t.type for t in tokens]
-
-            control_flow = sum(1 for t in token_types if t in (
-                TokenType.KW_IF, TokenType.KW_ELSE, TokenType.KW_WHILE
-            ))
-            logical_ops = sum(1 for t in token_types if t in (
-                TokenType.AND, TokenType.OR
-            ))
-            comparison_ops = sum(1 for t in token_types if t in (
-                TokenType.EQ, TokenType.NEQ, TokenType.LT, TokenType.GT,
-                TokenType.LTE, TokenType.GTE
-            ))
-            arithmetic_ops = sum(1 for t in token_types if t in (
-                TokenType.PLUS, TokenType.MINUS, TokenType.MULTIPLY,
-                TokenType.DIVIDE, TokenType.MODULO
-            ))
-
-            brace_depth = 0
-            max_brace_depth = 0
-            paren_depth = 0
-            max_paren_depth = 0
-            for tok in tokens:
-                if tok.type == TokenType.LBRACE:
-                    brace_depth += 1
-                    max_brace_depth = max(max_brace_depth, brace_depth)
-                elif tok.type == TokenType.RBRACE:
-                    brace_depth = max(brace_depth - 1, 0)
-                elif tok.type == TokenType.LPAREN:
-                    paren_depth += 1
-                    max_paren_depth = max(max_paren_depth, paren_depth)
-                elif tok.type == TokenType.RPAREN:
-                    paren_depth = max(paren_depth - 1, 0)
-
-            complexity_score = 0
-            if control_flow:
-                complexity_score += 2
-            if logical_ops:
-                complexity_score += 2
-            if comparison_ops >= 2:
-                complexity_score += 1
-            if arithmetic_ops >= 4:
-                complexity_score += 1
-            if max_brace_depth >= 2:
-                complexity_score += 3
-            if max_paren_depth >= 3:
-                complexity_score += 2
-            if len(tokens) >= 40:
-                complexity_score += 2
-
-            return complexity_score >= 4
-
-        if parser_type == 'topdown':
-            ast, parse_errors, parse_steps = parse_with(TopDownParser)
-        elif parser_type == 'bottomup':
-            ast, parse_errors, parse_steps = parse_with(BottomUpParser)
-        else:
-            if prefer_bottomup_first():
-                ast, parse_errors, parse_steps = parse_with(BottomUpParser)
-                chosen_parser = 'bottomup'
-                if not ast or parse_errors:
-                    ast, parse_errors, parse_steps = parse_with(TopDownParser)
-                    if ast and not parse_errors:
-                        chosen_parser = 'topdown'
-            else:
-                ast, parse_errors, parse_steps = parse_with(TopDownParser)
-                if not ast or parse_errors:
-                    ast, parse_errors, parse_steps = parse_with(BottomUpParser)
-                    chosen_parser = 'bottomup'
-                else:
-                    chosen_parser = 'topdown'
+        ast, parse_errors, parse_steps = parse_with(TopDownParser)
 
         results['parser_type'] = chosen_parser
         results['ast']          = ast
