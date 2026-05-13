@@ -23,7 +23,7 @@ def index():
 def compile_route():
     data        = request.get_json(force=True)
     source      = data.get('source', '')
-    parser_type = data.get('parser_type', 'topdown')
+    parser_type = 'auto'
     execute     = data.get('execute', False)
 
     if not source.strip():
@@ -51,13 +51,14 @@ def compile_route():
         'sem_errors':   res.get('sem_errors',   []),
         'sem_warnings': res.get('sem_warnings', []),
         'sem_log':      res.get('sem_log',      []),
+        'issues':       res.get('issues',       {}),
         'symbol_table': res.get('symbol_table', {}),
         'exe_output':   res.get('exe_output',   []),
         'exe_errors':   res.get('exe_errors',   []),
         'exe_log':      res.get('exe_log',      []),
         'success':      res.get('success',      False),
         'executed':     res.get('executed',     False),
-        'parser_type':  parser_type,
+        'parser_type':  res.get('parser_type', parser_type),
         'stats': {
             'tokens':  len(tokens_data),
             'lines':   len(source.splitlines()),

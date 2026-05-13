@@ -83,38 +83,6 @@ body {
   box-shadow: 0 2px 8px rgba(22,163,74,.35);
 }
 .nav-spacer { flex: 1; }
-.parser-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 4px;
-}
-.parser-group label {
-  font-size: 12px;
-  color: var(--text2);
-  padding: 0 8px;
-  font-weight: 500;
-}
-.parser-btn {
-  padding: 5px 14px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--text2);
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-  font-family: inherit;
-}
-.parser-btn.active {
-  background: var(--surface);
-  color: var(--green);
-  box-shadow: 0 1px 3px rgba(0,0,0,.12);
-}
 .nav-badge {
   font-size: 11px;
   font-weight: 600;
@@ -530,6 +498,99 @@ body {
 .msg-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 .msg-text { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; }
 
+/* ═══════════════════════════════════════════ error panel */
+.error-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.error-section {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.error-section h4 {
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.error-count {
+  margin-left: auto;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 99px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.error-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.error-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.error-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.error-kind {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: #e0f2fe;
+  color: #075985;
+}
+.error-phase {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--surface2);
+  color: var(--text2);
+}
+.error-loc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+}
+.error-msg {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.error-token {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.error-empty {
+  color: var(--text3);
+  font-size: 13px;
+  padding: 12px 4px;
+}
+
 /* ═══════════════════════════════════════════ summary */
 .phase-grid {
   display: grid;
@@ -664,11 +725,6 @@ body {
   </a>
   <span class="nav-badge">v1.0</span>
   <div class="nav-spacer"></div>
-  <!-- <div class="parser-group">
-    <label>Parser:</label>
-    <button class="parser-btn active" onclick="setParser('topdown', this)">Top-Down</button>
-    <button class="parser-btn"        onclick="setParser('bottomup', this)">Bottom-Up</button>
-  </div> -->
 </nav>
 
 <!-- ════════════════════════════════════ MAIN -->
@@ -752,6 +808,9 @@ body {
       <button class="tab-btn active" onclick="switchTab('console',  this)">
         ⌨ Console <span class="tab-badge" id="badgeConsole"></span>
       </button>
+      <button class="tab-btn" onclick="switchTab('errors', this)">
+        ✕ Errors <span class="tab-badge err" id="badgeErrors"></span>
+      </button>
       <button class="tab-btn" onclick="switchTab('tokens',   this)">
         # Tokens <span class="tab-badge" id="badgeTokens"></span>
       </button>
@@ -779,6 +838,16 @@ body {
       <div class="tab-pane active" id="pane-console">
         <div class="console-wrap" id="consoleOut">
           <div class="console-empty">Click ▶ Compile or ⚡ Run Code to see output here…</div>
+        </div>
+      </div>
+
+      <!-- ERRORS -->
+      <div class="tab-pane" id="pane-errors">
+        <div id="errorContent">
+          <div class="empty-state">
+            <div class="big-icon">✕</div>
+            <p>Detailed compiler errors appear here.</p>
+          </div>
         </div>
       </div>
 
@@ -848,15 +917,7 @@ body {
 <!-- ════════════════════════════════════ JAVASCRIPT -->
 <script>
 /* ────────────────────────────────── state */
-let currentParser  = 'topdown';
 let lastResult     = null;
-
-/* ────────────────────────────────── parser selector */
-function setParser(p, btn) {
-  currentParser = p;
-  document.querySelectorAll('.parser-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
 
 /* ────────────────────────────────── tab switching */
 function switchTab(name, btn) {
@@ -974,7 +1035,6 @@ async function callCompiler(execute) {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         source: src,
-        parser_type: currentParser,
         execute: execute,
       }),
     });
@@ -1002,6 +1062,7 @@ function esc(s) {
 function renderAll(d) {
   updateStats(d.stats || {tokens:0,lines:0,errors:0,symbols:0});
   renderConsole(d);
+  renderErrors(d);
   renderTokens(d);
   renderAST(d);
   renderSteps(d);
@@ -1014,6 +1075,7 @@ function renderAll(d) {
   setBadge('badgeSymbols', Object.keys(d.symbol_table || {}).length);
   const totalErr = (d.lex_errors||[]).length + (d.parse_errors||[]).length + (d.sem_errors||[]).length;
   setBadge('badgeSem', totalErr || '', totalErr > 0);
+  setBadge('badgeErrors', totalErr || '', totalErr > 0);
 
   if (d.executed) {
     const n = (d.exe_output||[]).length;
@@ -1042,18 +1104,49 @@ function renderConsole(d) {
   const parser = d.parser_type === 'topdown' ? 'Top-Down' : 'Bottom-Up';
   html += `<div class="console-header">── ${esc(parser)} Parser ──────────────────────</div>`;
 
+  function phaseLabel(item) {
+    const phase = (item?.phase || '').toLowerCase();
+    if (phase === 'lexer') return 'Lexical error';
+    if (phase === 'parser') return 'Syntax error';
+    if (phase === 'semantic') return item?.severity === 'warning' ? 'Semantic warning' : 'Semantic error';
+    if (phase === 'runtime') return 'Runtime error';
+    return 'Compiler error';
+  }
+
+  function formatConsoleError(item, fallbackText) {
+    if (item && typeof item === 'object') {
+      const parts = [];
+      if (item.line != null) parts.push(`Line ${item.line}`);
+      if (item.col != null) parts.push(`Col ${item.col}`);
+      const location = parts.length ? `${parts.join(': ')}: ` : '';
+      return `${phaseLabel(item)}: ${location}${item.message || fallbackText || 'Unknown error'}`;
+    }
+    return fallbackText || String(item || 'Unknown error');
+  }
+
   // compilation errors
-  const allErrs = [...(d.lex_errors||[]), ...(d.parse_errors||[]), ...(d.sem_errors||[])];
+  const allErrs = [
+    ...((d.issues?.lexer || []).map(i => ({...i, phase: i.phase || 'lexer'}))),
+    ...((d.issues?.parser || []).map(i => ({...i, phase: i.phase || 'parser'}))),
+    ...((d.issues?.semantic || []).map(i => ({...i, phase: i.phase || 'semantic'}))),
+  ];
   if (allErrs.length) {
     allErrs.forEach(e => {
-      html += `<div class="console-line"><span class="prompt">✕</span><span class="err-out">${esc(e)}</span></div>`;
+      html += `<div class="console-line"><span class="prompt">✕</span><span class="err-out">${esc(formatConsoleError(e))}</span></div>`;
     });
   }
 
-  if (d.sem_warnings?.length) {
-    d.sem_warnings.forEach(w => {
-      html += `<div class="console-line"><span class="prompt" style="color:#fde68a">⚠</span><span style="color:#fde68a">${esc(w)}</span></div>`;
-    });
+  const semWarnings = (d.issues?.semantic || []).filter(i => i.severity === 'warning');
+  if (semWarnings.length || d.sem_warnings?.length) {
+    if (semWarnings.length) {
+      semWarnings.forEach(w => {
+        html += `<div class="console-line"><span class="prompt" style="color:#fde68a">⚠</span><span style="color:#fde68a">${esc(formatConsoleError(w))}</span></div>`;
+      });
+    } else {
+      d.sem_warnings.forEach(w => {
+        html += `<div class="console-line"><span class="prompt" style="color:#fde68a">⚠</span><span style="color:#fde68a">${esc(w)}</span></div>`;
+      });
+    }
   }
 
   if (d.executed) {
@@ -1069,7 +1162,7 @@ function renderConsole(d) {
     if (d.exe_errors?.length) {
       html += `<hr class="console-divider"/>`;
       d.exe_errors.forEach(e => {
-        html += `<div class="console-line"><span class="prompt">✕</span><span class="err-out">Runtime: ${esc(e)}</span></div>`;
+        html += `<div class="console-line"><span class="prompt">✕</span><span class="err-out">${esc(formatConsoleError({phase:'runtime', message:e}))}</span></div>`;
       });
     }
   } else if (!allErrs.length) {
@@ -1078,6 +1171,49 @@ function renderConsole(d) {
   }
 
   el.innerHTML = html;
+}
+
+/* ── errors */
+function renderErrors(d) {
+  const cont = document.getElementById('errorContent');
+  const issues = d.issues || {};
+  const groups = [
+    { key: 'lexer', title: 'Lexer Errors', icon: '#', items: issues.lexer || [] },
+    { key: 'parser', title: 'Parser / Syntax Errors', icon: '↕', items: issues.parser || [] },
+    { key: 'semantic', title: 'Semantic Errors', icon: '◎', items: (issues.semantic || []).filter(x => x.severity !== 'warning') },
+    { key: 'warnings', title: 'Semantic Warnings', icon: '⚠', items: (issues.semantic || []).filter(x => x.severity === 'warning') },
+  ];
+  const hasAny = groups.some(g => g.items.length);
+  if (!hasAny) {
+    cont.innerHTML = `<div class="empty-state"><div class="big-icon">✕</div><p>No compiler errors detected.</p></div>`;
+    return;
+  }
+
+  let html = '<div class="error-wrap">';
+  groups.forEach(group => {
+    if (!group.items.length) return;
+    html += `<section class="error-section">`;
+    html += `<h4><span>${esc(group.icon)}</span>${esc(group.title)}<span class="error-count">${group.items.length}</span></h4>`;
+    html += `<div class="error-items">`;
+    group.items.forEach(item => {
+      const loc = [item.line != null ? `line ${item.line}` : '', item.col != null ? `col ${item.col}` : '']
+        .filter(Boolean)
+        .join(', ');
+      html += `<div class="error-item">`;
+      html += `<div class="error-top">`;
+      html += `<span class="error-kind">${esc(item.kind || 'error')}</span>`;
+      html += `<span class="error-phase">${esc(item.phase || group.key)}</span>`;
+      if (loc) html += `<span class="error-loc">${esc(loc)}</span>`;
+      html += `</div>`;
+      html += `<div class="error-msg">${esc(item.message || 'Unknown error')}`;
+      if (item.token) html += `<span class="error-token">${esc(item.token)}</span>`;
+      html += `</div>`;
+      html += `</div>`;
+    });
+    html += `</div></section>`;
+  });
+  html += '</div>';
+  cont.innerHTML = html;
 }
 
 /* ── tokens */
@@ -1357,6 +1493,9 @@ function clearAll() {
     document.getElementById(id).classList.remove('has-error');
   });
   ['badgeConsole','badgeTokens','badgeSem','badgeSymbols'].forEach(id => {
+    document.getElementById(id).textContent = '';
+  });
+  ['badgeErrors'].forEach(id => {
     document.getElementById(id).textContent = '';
   });
   setStatus('Ready — write some code and click Compile', 'idle');
