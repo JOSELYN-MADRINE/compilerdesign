@@ -475,6 +475,11 @@ body {
 .code-block::-webkit-scrollbar-track { background: #1e293b; }
 .code-block::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
 
+#astContent {
+  line-height: 1.1;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+
 .step-shift  { color: #86efac; }
 .step-reduce { color: #fde68a; }
 .step-accept { color: #60a5fa; }
@@ -659,11 +664,11 @@ body {
   </a>
   <span class="nav-badge">v1.0</span>
   <div class="nav-spacer"></div>
-  <div class="parser-group">
+  <!-- <div class="parser-group">
     <label>Parser:</label>
     <button class="parser-btn active" onclick="setParser('topdown', this)">Top-Down</button>
     <button class="parser-btn"        onclick="setParser('bottomup', this)">Bottom-Up</button>
-  </div>
+  </div> -->
 </nav>
 
 <!-- ════════════════════════════════════ MAIN -->

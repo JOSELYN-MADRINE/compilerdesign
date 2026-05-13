@@ -33,9 +33,6 @@ OP_CLR    = "#91d7e3"   # operators
 # ══════════════════════════════════════════════════════════════ sample source
 
 SAMPLE = """\
-// ─────────────────────────────────────────────────
-//   Compiler Demo  –  click "Run Code" to execute!
-// ─────────────────────────────────────────────────
 
 // Variable declarations
 int    x   = 10;
@@ -113,19 +110,19 @@ class CompilerIDE:
         self._sep(bar)
 
         # ── parser selection ─────────────────────────────────────────────────
-        tk.Label(bar, text="Parser:", bg=BG_PANEL, fg=FG_DIM,
-                 font=self.sans).pack(side=tk.LEFT, padx=(10, 4), pady=10)
+        # tk.Label(bar, text="Parser:", bg=BG_PANEL, fg=FG_DIM,
+        #          font=self.sans).pack(side=tk.LEFT, padx=(10, 4), pady=10)
 
         self.parser_var = tk.StringVar(value="topdown")
-        rb_kw = dict(bg=BG_PANEL, fg=FG_TEXT, selectcolor=BG_DARK,
-                     activebackground=BG_PANEL, activeforeground=ACCENT,
-                     font=self.sans, relief=tk.FLAT)
-        tk.Radiobutton(bar, text="Top-Down",  variable=self.parser_var,
-                       value="topdown",  **rb_kw).pack(side=tk.LEFT, padx=4)
-        tk.Radiobutton(bar, text="Bottom-Up", variable=self.parser_var,
-                       value="bottomup", **rb_kw).pack(side=tk.LEFT, padx=4)
+        # rb_kw = dict(bg=BG_PANEL, fg=FG_TEXT, selectcolor=BG_DARK,
+        #              activebackground=BG_PANEL, activeforeground=ACCENT,
+        #              font=self.sans, relief=tk.FLAT)
+        # tk.Radiobutton(bar, text="Top-Down",  variable=self.parser_var,
+        #                value="topdown",  **rb_kw).pack(side=tk.LEFT, padx=4)
+        # tk.Radiobutton(bar, text="Bottom-Up", variable=self.parser_var,
+        #                value="bottomup", **rb_kw).pack(side=tk.LEFT, padx=4)
 
-        self._sep(bar)
+        # self._sep(bar)
 
         # ── action buttons ───────────────────────────────────────────────────
         self._btn(bar, "▶  Run All Phases", self.run_all,
